@@ -1,0 +1,6 @@
+test/mocha
+--recursive
+--require should
+--require es6-jsx
+--bail
+--watch-extensions jsx
