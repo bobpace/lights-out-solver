@@ -14,40 +14,32 @@ describe('can solve for square matrices', function() {
     )
   );
 
+  var getRank = R.pipe(R.head, R.length);
   //finds indexes equal to 1 and sets their adjacent indexes to 1
-  var findAndActivateAdjacentIndexes = (matrix) => {
-    var m = matrix.dup(); //work with a copy, don't mutate existing matrix
+  var placeValuesAdjacentToPivot = (matrixElements, pivotValue, adjacentValue) => {
+    var matrix = R.clone(matrixElements);
+    var rank = getRank(matrix);
     var findAdjacentIndexes = R.pipe(
-      R.findIndex(R.equals(1)),
+      R.findIndex(R.equals(pivotValue)),
       (pivot) => [pivot - 1, pivot + 1],
-      R.filter(isInBounds(m.rank()))
+      R.filter(isInBounds(rank))
     );
-    var activateAdjacentToPivot = R.pipe(
-      R.prop('elements'),
-      R.map((row) => {
-        var updateRowIndex = R.forEach((index) => row[index] = 1);
-        var updateAdjacentIndexes = R.pipe(findAdjacentIndexes, updateRowIndex);
-        updateAdjacentIndexes(row);
-        return row;
-      })
-    );
-    return activateAdjacentToPivot(m);
+    var activateAdjacentToPivot = R.map((row) => {
+      var updateRowIndex = R.forEach((index) => row[index] = adjacentValue);
+      var updateAdjacentIndexes = R.pipe(findAdjacentIndexes, updateRowIndex);
+      updateAdjacentIndexes(row);
+      return row;
+    });
+    return activateAdjacentToPivot(matrix);
   };
 
   var makeA = (rank) => {
-    var I = Matrix.I(rank);
-    var i = I.elements;
+    var I = Matrix.I(rank).elements;
     var zero = Matrix.Zero(rank, rank).elements;
-    var B = findAndActivateAdjacentIndexes(I);
-
-    //TODO: make this for rank matrices, not hard coded for 3x3
-    var t = [
-      [B, i, zero],
-      [i, B, i],
-      [zero, i, B]
-    ];
-
-    return hconcat(t);
+    var B = placeValuesAdjacentToPivot(I, 1, 1);
+    var pivotB = R.map(R.map((x) => x ? B : zero), I);
+    var A = placeValuesAdjacentToPivot(pivotB, B, I);
+    return hconcat(A);
   };
 
   var mod2 = (x) => x % 2;
@@ -101,5 +93,4 @@ describe('can solve for square matrices', function() {
     var x = A.inv().round().multiply(b).map(mod2);
     x.should.eql(knownAnswer);
   });
-
 });
