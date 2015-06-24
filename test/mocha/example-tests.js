@@ -77,7 +77,6 @@ describe('can solve for square matrices', function() {
     //multiply regular inverse by determinant, round to integers
     //then multiply everything by the determinant's multiplicative inverse modulo 2
     var det = A.det();
-    console.log(det);
     var multiplicativeInverseMod2 = modinv(det, 2);
     var invMod2 = A.inv()
           .multiply(det)

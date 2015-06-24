@@ -1,10 +1,12 @@
 {
-  "name": "lights-out-react",
+  "name": "lights-out-solver",
   "version": "1.0.0",
-  "description": "lights out puzzle game solver using ramda/sylvester/react",
+  "description": "solver for lights out puzzle game",
   "scripts": {
     "test": "mocha",
-    "tdd": "mocha -w"
+    "tdd": "mocha -w",
+    "webpack": "webpack --progress --colors",
+    "server": "node -- ./webpack-dev-server.js"
   },
   "author": "Bob Pace",
   "license": "ISC",
@@ -12,6 +14,7 @@
     "babel": "^5.5.8",
     "babel-core": "^5.5.8",
     "babel-loader": "^5.1.4",
+    "css-loader": "^0.15.1",
     "karma": "^0.12.36",
     "karma-cli": "0.0.4",
     "mocha": "^2.2.5",
@@ -20,6 +23,7 @@
     "react": "^0.13.3",
     "react-hot-loader": "^1.2.7",
     "should": "^7.0.1",
+    "style-loader": "^0.12.3",
     "sylvester": "0.0.21",
     "webpack": "^1.9.11",
     "webpack-dev-server": "^1.9.0"
