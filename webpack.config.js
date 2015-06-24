@@ -1,13 +1,17 @@
 module.exports = {
-  entry: ["./entry.js"],
+  entry: ["./entry.jsx"],
   output: {
     path: __dirname,
     filename: "bundle.js"
   },
   module: {
     loaders: [
-      {test: /\.css$/, loader: "style!css"}
+      {test: /\.css$/, loader: "style!css"},
+      {test: /\.jsx?$/, exclude: /node_modules/, loader: "babel"}
     ]
   },
-  plugins: []
+  plugins: [],
+  resolve: {
+    extensions: ['', '.js', '.jsx']
+  }
 };
