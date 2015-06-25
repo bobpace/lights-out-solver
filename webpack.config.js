@@ -1,3 +1,4 @@
+var path = require('path');
 module.exports = {
   entry: ["./entry.jsx"],
   output: {
@@ -6,12 +7,15 @@ module.exports = {
   },
   module: {
     loaders: [
-      {test: /\.css$/, loader: "style!css"},
+      {test: /\.less$/, loader: "style!css!less"},
       {test: /\.jsx?$/, exclude: /node_modules/, loader: "babel"}
     ]
   },
   plugins: [],
   resolve: {
-    extensions: ['', '.js', '.jsx']
+    extensions: ['', '.js', '.jsx'],
+    alias: {
+      fs: path.join(__dirname, "/stub-fs.js")
+    }
   }
 };
