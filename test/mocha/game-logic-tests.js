@@ -6,7 +6,7 @@ var {
   solveForX,
   mod2,
   boardToggler
-} = require('../../lights-out');
+} = require('../../game-logic');
 
 describe("lights out game logic", function() {
 

@@ -6,7 +6,7 @@ var {
   boardToggler,
   makeA,
   solveForX
-} = require('./lights-out.js');
+} = require('./game-logic');
 
 var makeCell = R.curry((rowOffset, updateBoard, value, columnIndex) => {
   var position = rowOffset + columnIndex + 1;
@@ -45,6 +45,8 @@ var GameBoard = React.createClass({
   getInitialState() {
     var rank = 3;
     var A = makeA(rank);
+    var board = Matrix.Random(9, 1).round();
+    console.log(board.elements);
     return {
       board: [
         [0, 1, 0],
