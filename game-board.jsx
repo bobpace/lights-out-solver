@@ -46,7 +46,6 @@ var GameBoard = React.createClass({
     var rank = 3;
     var A = makeA(rank);
     var board = Matrix.Random(9, 1).round();
-    console.log(board.elements);
     return {
       board: [
         [0, 1, 0],

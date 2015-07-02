@@ -17,8 +17,9 @@ var LightCell = React.createClass({
     this.props.updateBoard(this.props.position);
   },
   render() {
+    var lightState = this.props.value ? "light-on" : "light-off";
     return (
-      <span onClick={this.updateBoard} className="light-cell">
+      <span onClick={this.updateBoard} className={"light-cell " + lightState}>
         {this.props.value}
       </span>
     );
