@@ -1,17 +1,36 @@
+@light-border: #000066;
+@light-border-hover: white;
+@light-off: #0000FF;
+@light-on: #FFFF33;
+
 .light-row {
+  display: table;
 }
 
 .light-cell {
-  border: 1px solid black;
+  border: 1px solid @light-border;
   display: inline-block;
-  padding: 50px;
+  padding: 5px 10px;
+  cursor: pointer;
+  &:hover {
+    border: 1px solid @light-border-hover;
+  }
 }
 
 .light-on {
-  background: yellow;
+  background: @light-on;
 }
 
 .light-off {
-  background: blue;
+  background: @light-off;
   color: white;
+}
+
+.noselect {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }

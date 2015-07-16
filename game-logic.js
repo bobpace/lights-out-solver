@@ -1,22 +1,21 @@
 var R = require('ramda');
 var {Matrix} = require('sylvester');
 
-var isInBounds = (rank) => (x) => x >= 0 && x < rank;
-var getRank = R.pipe(R.head, R.length);
+var isInBounds = (order) => (x) => x >= 0 && x < order;
+var determineOrderFor = R.pipe(R.head, R.length);
 //finds indexes equal to 1 and sets their adjacent indexes to 1
 var placeValuesAdjacentToPivot = (matrixElements, pivotValue, adjacentValue) => {
   var matrix = R.clone(matrixElements);
-  var rank = getRank(matrix);
+  var order = determineOrderFor(matrix);
   var findAdjacentIndexes = R.pipe(
     R.findIndex(R.equals(pivotValue)),
     (pivot) => [pivot - 1, pivot + 1],
-    R.filter(isInBounds(rank))
+    R.filter(isInBounds(order))
   );
   var assignAdjacentValuesToPivot = R.map((row) => {
-    var setAdjacentValueAtIndexes = R.forEach((index) => row[index] = adjacentValue);
     var findAndSetAdjacentValuesForRow = R.pipe(
       findAdjacentIndexes,
-      setAdjacentValueAtIndexes
+      R.forEach((index) => row[index] = adjacentValue)
     );
     findAndSetAdjacentValuesForRow(row);
     return row;
@@ -35,14 +34,14 @@ var hconcat = R.pipe(
 );
 
 /**
- * Makes rank X rank matrix
- * with each column representing effect of pressing a light
- * @param {number} rank
+ * Makes n X n matrix
+ * with each column representing the effect of pressing one light
+ * @param {number} order
  * @returns {Matrix}
  */
-var makeA = (rank) => {
-  var I = Matrix.I(rank).elements;
-  var zero = Matrix.Zero(rank, rank).elements;
+var makeA = (order) => {
+  var I = Matrix.I(order).elements;
+  var zero = Matrix.Zero(order, order).elements;
   var B = placeValuesAdjacentToPivot(I, 1, 1);
   var pivotB = R.map(R.map((x) => x ? B : zero), I);
   var A = placeValuesAdjacentToPivot(pivotB, B, I);
@@ -50,29 +49,64 @@ var makeA = (rank) => {
 };
 
 var mod2 = (x) => x % 2;
+var toZ2 = R.pipe(mod2, Math.abs);
+var mapZ2 = (matrix) => matrix.map(toZ2);
 
-var modinv = (a, m) => {
-  var v = 1;
-  var d = a;
-  var u = (a === 1);
-  var t = 1 - u;
-  if (t === 1) {
-    var c = m % a;
-    u = Math.floor(m / a);
-    while (c !== 1 && t === 1) {
-      var q = Math.floor(d / c);
-      d = d % c;
-      v = v + q * u;
-      t = (d !== 1);
-      if (t === 1) {
-        q = Math.floor(c / d);
-        c = c % d;
-        u = u + q * v;
+//toRightTriangular function from sylvester library modified for Z2
+var toRightTriangularZ2 = (matrix) => {
+  var M = matrix.dup(), els;
+  var n = matrix.elements.length, i, j, np = matrix.elements[0].length, p;
+  for (i = 0; i < n; i++) {
+    if (M.elements[i][i] === 0) {
+      for (j = i + 1; j < n; j++) {
+	if (M.elements[j][i] !== 0) {
+          els = [];
+          for (p = 0; p < np; p++) { els.push(toZ2(M.elements[i][p] + M.elements[j][p])); }
+          M.elements[i] = els;
+          break;
+	}
       }
     }
-    u = v * (1 - t) + t * (m - u);
+    if (M.elements[i][i] !== 0) {
+      for (j = i + 1; j < n; j++) {
+	var multiplier = M.elements[j][i];
+	els = [];
+	for (p = 0; p < np; p++) {
+          els.push(p <= i ? 0 : toZ2(M.elements[j][p] - M.elements[i][p] * multiplier));
+	}
+	M.elements[j] = els;
+      }
+    }
   }
-  return u;
+  return M;
+};
+
+//inverse function from sylvester library modified for Z2
+var inverseZ2 = (matrix) => {
+  if (!matrix.isSquare() || matrix.isSingular()) { return null; }
+  var n = matrix.elements.length, i = n, j;
+  var M = toRightTriangularZ2(matrix.augment(Matrix.I(n)));
+  var np = M.elements[0].length, p, els;
+  var inverseElements = [], newElement;
+  while (i--) {
+    els = [];
+    inverseElements[i] = [];
+    for (p = 0; p < np; p++) {
+      newElement = M.elements[i][p];
+      els.push(newElement);
+      if (p >= n) { inverseElements[i].push(newElement); }
+    }
+    M.elements[i] = els;
+    j = i;
+    while (j--) {
+      els = [];
+      for (p = 0; p < np; p++) {
+	els.push(toZ2(M.elements[j][p] - M.elements[i][p] * M.elements[j][i]));
+      }
+      M.elements[j] = els;
+    }
+  }
+  return Matrix.create(inverseElements);
 };
 
 /**
@@ -82,78 +116,58 @@ var modinv = (a, m) => {
  * @returns {Vector} x
  */
 var solveForX = (A, b) => {
-  //TODO: implement gaussian elimination mod 2
-
-  //multiply regular inverse by determinant, round to integers
-  //then multiply everything by the determinant's multiplicative inverse modulo 2
-  var det = A.det();
-  var multiplicativeInverseMod2 = modinv(det, 2);
-  var invMod2 = A.inv()
-        .multiply(det)
-        .round()
-        .multiply(multiplicativeInverseMod2)
-        .map(R.compose(Math.abs, mod2));
-  return invMod2.multiply(b).map(mod2);
+  var invZ2 = inverseZ2(A);
+  return mapZ2(invZ2.multiply(b));
 };
 
-//example when solving Ax=b for 3x3
+var mapIndexed = R.addIndex(R.map);
 
-//9x9 matrix made up of 9 3x3 matrices
-//each column represents action of pressing switch at position
-//    B I 0
-//A = I B I
-//    0 I B
-
-//identity
-//    1 0 0
-//I = 0 1 0
-//    0 0 1
-
-//identity matrix with each adjacent index also active
-//to represent action of pressing a switch
-//    1 1 0
-//B = 1 1 1
-//    0 1 1
-
-//zero
-//    0 0 0
-//0 = 0 0 0
-//    0 0 0
-
-//example 3x3 board configuration
-//represents which lights are turned on to start
-//    0 1 0
-//b = 1 1 0
-//    0 1 1
-
-//solve for x and we have our strategy to turn the lights off
+var columnVectorToMatrix = R.curry((order, columnVector) => {
+  var mapIndexes = R.map(R.__, R.range(0, order));
+  var indexModuloRank = R.pipe(R.last, (i) => i % order);
+  var formMatrixFrom = R.pipe(
+    R.flatten,
+    mapIndexed((x, i) => [x, i]),
+    R.groupBy(indexModuloRank),
+    (groups) => mapIndexes((i) => mapIndexes((j) => groups[j][i][0]))
+  );
+  return formMatrixFrom(columnVector);
+});
 
 /**
  * Logic to toggle board when pressing a particular light
- * give rank first, then give column, then finally current board state
- * @param {number} rank of matrix
- * @returns {function} (column) -> (board) -> [[]]
+ * Moves are made by matrix addition in Z2, adding the effects of
+ * pressing a cell to the existing board state
+ * @param {number} order - n X n
+ * @param {number} cellNumber - position of light pressed
+ * corresponds to column in A containing effects of pressing that light
+ * @param {Array[Array[number]]} board - current board
+ * @returns {Array[Array[number]]} updated board state
  */
-var boardToggler = (rank) => {
-  var A = makeA(rank);
-  return (column) => {
-    var col = A.col(column).elements;
-    var mapIndexed = R.addIndex(R.map);
-    var mapRowIndexes = R.map(R.__, R.range(0, rank));
-    var indexModuloRank = R.pipe(R.last, (i) => i % rank);
-    var columnToMatrix = R.pipe(
-      mapIndexed((x, i) => [x, i]),
-      R.groupBy(indexModuloRank),
-      (groups) => mapRowIndexes((i) => mapRowIndexes((j) => groups[j][i][0]))
-    );
-    var toggleEffects = Matrix.create(columnToMatrix(col));
-    return (board) => Matrix.create(board).add(toggleEffects).map(mod2).elements;
-  };
+var boardToggler = R.curry((order, cellNumber, board) => {
+  var A = makeA(order);
+  var columnVector = A.col(cellNumber).transpose().elements;
+  var toggleEffects = Matrix.create(columnVectorToMatrix(order, columnVector));
+  var toggledMatrix = Matrix.create(board).add(toggleEffects);
+  return mapZ2(toggledMatrix).elements;
+});
+
+var randomBoardAsColumnVector = (order) => {
+  var size = Math.pow(order, 2);
+  return Matrix.Random(size, 1).round();
+};
+
+var randomBoardAsMatrix = (order) => {
+  var columnVector = randomBoardAsColumnVector(order);
+  return columnVectorToMatrix(order, columnVector.elements);
 };
 
 module.exports = {
   makeA,
   solveForX,
-  mod2,
-  boardToggler
+  mapZ2,
+  boardToggler,
+  columnVectorToMatrix,
+  randomBoardAsColumnVector,
+  randomBoardAsMatrix
 };

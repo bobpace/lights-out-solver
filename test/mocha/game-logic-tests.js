@@ -4,8 +4,10 @@ var {Matrix} = require('sylvester');
 var {
   makeA,
   solveForX,
-  mod2,
-  boardToggler
+  mapZ2,
+  boardToggler,
+  randomBoardAsColumnVector,
+  randomBoardAsMatrix
 } = require('../../game-logic');
 
 describe("lights out game logic", function() {
@@ -17,14 +19,14 @@ describe("lights out game logic", function() {
       [1, 1, 0],
       [0, 1, 1]
     ];
-    var assertToggle = (columnNumber, value) => {
+    var assertColumnToggleChanges = (columnNumber, value) => {
       var toggleColumn = toggleForRank3(columnNumber);
       var result = toggleColumn(board);
       result.should.eql(value);
     };
 
     it("upper left", function() {
-      assertToggle(
+      assertColumnToggleChanges(
         1,
         [[1, 0, 0],
          [0, 1, 0],
@@ -33,7 +35,7 @@ describe("lights out game logic", function() {
     });
 
     it("upper center", function() {
-      assertToggle(
+      assertColumnToggleChanges(
         2,
         [[1, 0, 1],
          [1, 0, 0],
@@ -42,7 +44,7 @@ describe("lights out game logic", function() {
     });
 
     it("upper right", function() {
-      assertToggle(
+      assertColumnToggleChanges(
         3,
         [[0, 0, 1],
          [1, 1, 1],
@@ -51,7 +53,7 @@ describe("lights out game logic", function() {
     });
 
     it("middle left", function() {
-      assertToggle(
+      assertColumnToggleChanges(
         4,
         [[1, 1, 0],
          [0, 0, 0],
@@ -60,7 +62,7 @@ describe("lights out game logic", function() {
     });
 
     it("middle center", function() {
-      assertToggle(
+      assertColumnToggleChanges(
         5,
         [[0, 0, 0],
          [0, 0, 1],
@@ -69,7 +71,7 @@ describe("lights out game logic", function() {
     });
 
     it("middle right", function() {
-      assertToggle(
+      assertColumnToggleChanges(
         6,
         [[0, 1, 1],
          [1, 0, 1],
@@ -78,7 +80,7 @@ describe("lights out game logic", function() {
     });
 
     it("lower left", function() {
-      assertToggle(
+      assertColumnToggleChanges(
         7,
         [[0, 1, 0],
          [0, 1, 0],
@@ -87,7 +89,7 @@ describe("lights out game logic", function() {
     });
 
     it("lower center", function() {
-      assertToggle(
+      assertColumnToggleChanges(
         8,
         [[0, 1, 0],
          [1, 0, 0],
@@ -96,7 +98,7 @@ describe("lights out game logic", function() {
     });
 
     it("lower right", function() {
-      assertToggle(
+      assertColumnToggleChanges(
         9,
         [[0, 1, 0],
          [1, 1, 1],
@@ -105,8 +107,34 @@ describe("lights out game logic", function() {
     });
   });
 
-  describe('can solve for square matrices', function() {
-    it('specific 3x3', function() {
+  describe("can make a random board", function() {
+    var isArray = R.is(Array);
+
+    var canMakeBoard = (order) => {
+      var board = randomBoardAsMatrix(order);
+      isArray(board).should.be.true();
+      var rowIndexes = R.range(0, order);
+      R.forEach((i) => isArray(board[i]).should.be.true(), rowIndexes);
+      var isValidValue = R.contains(R.__, [0, 1]);
+      R.forEach(isValidValue, R.flatten(board));
+    };
+
+    it("2x2", function() {
+      canMakeBoard(2);
+    });
+
+    it("3x3", function() {
+      canMakeBoard(3);
+    });
+
+    it("4x4", function() {
+      canMakeBoard(4);
+    });
+  });
+
+  describe('can solve square matrices', function() {
+
+    it('can solve specific 3x3', function() {
       var A = makeA(3);
 
       //turn the 3x3 board configuration into a 9x1 column vector
@@ -120,44 +148,83 @@ describe("lights out game logic", function() {
       var knownAnswer = Matrix.create([1, 1, 1, 0, 0, 0, 0, 0, 1]);
 
       //use the known answer to produce the board configuration starting from all lights off
-      A.multiply(knownAnswer).map(mod2).elements.should.eql(b.elements);
+      mapZ2(A.multiply(knownAnswer)).elements.should.eql(b.elements);
 
       //and also use the board configuration to find the answer that will put it back to all lights off
       var x = solveForX(A, b);
       x.should.eql(knownAnswer);
-
-      // console.log("A: ");
-      // console.log(A);
-      // console.log("---");
-      // console.log("b: ");
-      // console.log(b);
-      // console.log("---");
-      // console.log("x: ");
-      // console.log(x);
     });
 
-    it("any random 2x2", function() {
-      var A = makeA(2);
-      var b = Matrix.Random(4, 1).round();
+    let solveRandom = (order) => {
+      var A = makeA(order);
+      var b = randomBoardAsColumnVector(order);
       var x = solveForX(A, b);
-      A.multiply(x).map(mod2).should.eql(b);
-    });
+      mapZ2(A.multiply(x)).should.eql(b);
+    };
 
-    it("any random 3x3", function() {
-      var A = makeA(3);
-      var b = Matrix.Random(9, 1).round();
-      var x = solveForX(A, b);
+    //If the dimension of the null space is zero
+    //then every configuration is winnable and the solution is unique
 
-      A.multiply(x).map(mod2).should.eql(b);
-    });
+    //otherwise configurations are only winnable
+    //if b is perpendicular to the null space columns
 
-    //rounding errors make this not work, need to implement gaussian elimination mod 2
-    xit("any random 4x4", function() {
-      var A = makeA(4);
-      var b = Matrix.Random(16, 1).round();
-      var x = solveForX(A, b);
-      A.multiply(x).map(mod2).should.eql(b);
+    // A = n x n
+    // n  - Null(A)
+    // 2  - 0
+    // 3  - 0
+    // 4  - 4
+    // 5  - 2
+    // 6  - 0
+    // 7  - 0
+    // 8  - 0
+    // 9  - 8
+    // 10 - 0
+    // 11 - 6
+    // 12 - 0
+    // 13 - 0
+    // 14 - 4
+    // 15 - 0
+    // 16 - 8
+    // 17 - 2
+    // 18 - 0
+    // 19 - 16
+    // 20 - 0
+    // 21 - 0
+
+    describe("can always win when dimension of null space is 0", function() {
+      it("2", function() {
+        solveRandom(2);
+      });
+
+      it("3", function() {
+        solveRandom(3);
+      });
+
+      it("6", function() {
+        solveRandom(6);
+      });
+
+      it("7", function() {
+        solveRandom(7);
+      });
+
+      it("8", function() {
+        solveRandom(8);
+      });
+
+      it("10", function() {
+        solveRandom(10);
+      });
+
+      it("12", function() {
+        solveRandom(12);
+      });
+
+      it("13", function() {
+        solveRandom(13);
+      });
+
+      //15, 18, 20, and 21 take longer than 2 seconds to run so leaving them out
     });
   });
-
 });

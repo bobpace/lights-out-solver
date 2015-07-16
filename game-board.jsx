@@ -5,7 +5,9 @@ var {Matrix} = require('sylvester');
 var {
   boardToggler,
   makeA,
-  solveForX
+  solveForX,
+  randomBoardAsMatrix,
+  columnVectorToMatrix
 } = require('./game-logic');
 
 var makeCell = R.curry((rowOffset, updateBoard, value, columnIndex) => {
@@ -16,12 +18,22 @@ var makeCell = R.curry((rowOffset, updateBoard, value, columnIndex) => {
   );
 });
 
+//TODO: combo box to select size of board
+let alwaysWinnable = [2, 3, 6, 7, 8, 10, 12, 13, 15 /*, 18, 20, 21*/];
+
+//TODO: overlay solution onto board
 var GameBoard = React.createClass({
   displayName: "GameBoard",
   propTypes: {
     board: React.PropTypes.arrayOf(
       React.PropTypes.arrayOf(React.PropTypes.number)
     )
+  },
+  getInitialState() {
+    var order = 10;
+    var board = randomBoardAsMatrix(order);
+    var A = makeA(order);
+    return {order, board, A, solution: []};
   },
   makeRow(row, rowIndex) {
     var numCols = R.length(row);
@@ -32,35 +44,23 @@ var GameBoard = React.createClass({
     );
   },
   findSolution() {
-    var boardColumnVector = Matrix.create(R.flatten(this.state.board));
-    var solution = solveForX(this.state.A, boardColumnVector);
-    console.log(R.flatten(solution.elements));
+    var b = Matrix.create(R.flatten(this.state.board));
+    var x = solveForX(this.state.A, b);
+    var solution = columnVectorToMatrix(this.state.order, R.flatten(x.elements));
+    this.setState({solution});
   },
   updateBoard(position) {
-    var toggleFor3 = boardToggler(3);
-    var toggleColumn = toggleFor3(position);
+    var toggleForOrder = boardToggler(this.state.order);
+    var toggleColumn = toggleForOrder(position);
     var newBoardState = toggleColumn(this.state.board);
     this.setState({board: newBoardState});
   },
-  getInitialState() {
-    var rank = 3;
-    var A = makeA(rank);
-    var board = Matrix.Random(9, 1).round();
-    return {
-      board: [
-        [0, 1, 0],
-        [1, 1, 0],
-        [0, 1, 1]
-      ],
-      rank: rank,
-      A: A
-    };
-  },
   render() {
     return (
-      <div>
+      <div className="noselect">
         {this.state.board.map(this.makeRow)}
         <input type="button" style={{width: 200}} value="Solve" onClick={this.findSolution}/>
+        {this.state.solution.map((x) => <div>{x}</div>)}
       </div>
     );
   }
