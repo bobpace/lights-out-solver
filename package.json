@@ -6,7 +6,8 @@
     "test": "mocha",
     "tdd": "mocha -w",
     "webpack": "webpack --progress --colors",
-    "server": "node -- ./webpack-dev-server.js"
+    "server": "node -- ./webpack-dev-server.js",
+    "dockerhost": "DEVSERVER_HOSTNAME=dockerhost npm run server"
   },
   "author": "Bob Pace",
   "license": "ISC",

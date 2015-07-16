@@ -3,8 +3,10 @@ var webpack = require('webpack');
 var WebpackDevServer = require('webpack-dev-server');
 var R = require('ramda');
 
-var port = 3000;
-var webDevServerAddress = "http://dockerhost:" + port;
+var port = process.env.DEVSERVER_PORT || 3000;
+var host = process.env.DEVSERVER_HOSTNAME || "localhost";
+var webDevServerAddress = "http://" + host + ":" + port;
+console.log('running dev server at: ' + webDevServerAddress);
 
 config.entry = [
   "webpack/hot/dev-server",
