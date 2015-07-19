@@ -18,8 +18,7 @@ var makeCell = R.curry((rowOffset, updateBoard, value, columnIndex) => {
   );
 });
 
-//TODO: combo box to select size of board
-let alwaysWinnable = [2, 3, 6, 7, 8, 10, 12, 13, 15 /*, 18, 20, 21*/];
+var alwaysWinnableSizes = [2, 3, 6, 7, 8, 10, 12, 13, 15 /*, 18, 20, 21*/];
 
 //TODO: overlay solution onto board
 var GameBoard = React.createClass({
@@ -30,7 +29,10 @@ var GameBoard = React.createClass({
     )
   },
   getInitialState() {
-    var order = 10;
+    var order = 6;
+    return this.getBoardState(order);
+  },
+  getBoardState(order) {
     var board = randomBoardAsMatrix(order);
     var A = makeA(order);
     return {order, board, A, solution: []};
@@ -43,6 +45,13 @@ var GameBoard = React.createClass({
       </div>
     );
   },
+  changeBoardSize(event) {
+    var order = event.target.value;
+    this.setState(this.getBoardState(order));
+  },
+  mapSizeOptions: R.map(
+    (size) => <option value={size} key={size}>{size}</option>
+  ),
   findSolution() {
     var b = Matrix.create(R.flatten(this.state.board));
     var x = solveForX(this.state.A, b);
@@ -56,8 +65,15 @@ var GameBoard = React.createClass({
     this.setState({board: newBoardState});
   },
   render() {
+    var selectBoardSize = (
+      <select value={this.state.order} onChange={this.changeBoardSize}>
+        {this.mapSizeOptions(alwaysWinnableSizes)}
+      </select>
+    );
+
     return (
-      <div className="noselect">
+      <div className="board">
+        {selectBoardSize}
         {this.state.board.map(this.makeRow)}
         <input type="button" style={{width: 200}} value="Solve" onClick={this.findSolution}/>
         {this.state.solution.map((x) => <div>{x}</div>)}

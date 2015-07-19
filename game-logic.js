@@ -82,7 +82,7 @@ var toRightTriangularZ2 = (matrix) => {
 };
 
 //inverse function from sylvester library modified for Z2
-var inverseZ2 = (matrix) => {
+var inverseZ2 = R.memoize((matrix) => {
   if (!matrix.isSquare() || matrix.isSingular()) { return null; }
   var n = matrix.elements.length, i = n, j;
   var M = toRightTriangularZ2(matrix.augment(Matrix.I(n)));
@@ -107,7 +107,7 @@ var inverseZ2 = (matrix) => {
     }
   }
   return Matrix.create(inverseElements);
-};
+});
 
 /**
  * Solves Ax=b for Z2 field (0, 1 only valid values)
