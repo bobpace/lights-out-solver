@@ -10,9 +10,10 @@ var {
   columnVectorToMatrix
 } = require('./game-logic');
 
-var makeCell = R.curry((rowOffset, updateBoard, value, columnIndex) => {
+var makeCell = R.curry((rowOffset, updateBoard, rowSolution, value, columnIndex) => {
   var position = rowOffset + columnIndex + 1;
-  var props = {key: columnIndex, updateBoard, value, position};
+  var cellSolution = rowSolution[columnIndex];
+  var props = {key: columnIndex, updateBoard, value, position, cellSolution};
   return (
     <LightCell {... props} />
   );
@@ -20,7 +21,6 @@ var makeCell = R.curry((rowOffset, updateBoard, value, columnIndex) => {
 
 var alwaysWinnableSizes = [2, 3, 6, 7, 8, 10, 12, 13, 15 /*, 18, 20, 21*/];
 
-//TODO: overlay solution onto board
 var GameBoard = React.createClass({
   displayName: "GameBoard",
   propTypes: {
@@ -29,19 +29,27 @@ var GameBoard = React.createClass({
     )
   },
   getInitialState() {
-    var order = 6;
+    var order = 3;
     return this.getBoardState(order);
   },
   getBoardState(order) {
     var board = randomBoardAsMatrix(order);
     var A = makeA(order);
-    return {order, board, A, solution: []};
+    return {
+      order,
+      board,
+      A,
+      solution: this.findSolution(order, board, A)
+    };
   },
   makeRow(row, rowIndex) {
-    var numCols = R.length(row);
+    var rowOffset = this.state.order * rowIndex;
+    var rowSolution = this.state.solution[rowIndex] || [];
+    var cellMaker = makeCell(rowOffset, this.updateBoard, rowSolution);
+
     return (
       <div className="light-row" key={rowIndex} >
-        {row.map(makeCell(numCols * rowIndex, this.updateBoard))}
+        {row.map(cellMaker)}
       </div>
     );
   },
@@ -52,17 +60,19 @@ var GameBoard = React.createClass({
   mapSizeOptions: R.map(
     (size) => <option value={size} key={size}>{size}</option>
   ),
-  findSolution() {
-    var b = Matrix.create(R.flatten(this.state.board));
-    var x = solveForX(this.state.A, b);
-    var solution = columnVectorToMatrix(this.state.order, R.flatten(x.elements));
-    this.setState({solution});
+  findSolution(order, board, A) {
+    var b = Matrix.create(R.flatten(board));
+    var x = solveForX(A, b);
+    return columnVectorToMatrix(order, R.flatten(x.elements));
   },
   updateBoard(position) {
     var toggleForOrder = boardToggler(this.state.order);
     var toggleColumn = toggleForOrder(position);
     var newBoardState = toggleColumn(this.state.board);
-    this.setState({board: newBoardState});
+    this.setState({
+      board: newBoardState,
+      solution: this.findSolution(this.state.order, newBoardState, this.state.A)
+    });
   },
   render() {
     var selectBoardSize = (
@@ -73,10 +83,10 @@ var GameBoard = React.createClass({
 
     return (
       <div className="board">
-        {selectBoardSize}
+        <div>
+          {selectBoardSize}
+        </div>
         {this.state.board.map(this.makeRow)}
-        <input type="button" style={{width: 200}} value="Solve" onClick={this.findSolution}/>
-        {this.state.solution.map((x) => <div>{x}</div>)}
       </div>
     );
   }

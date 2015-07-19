@@ -1,4 +1,6 @@
 var path = require('path');
+var stub = path.join(__dirname, "stub.js");
+
 module.exports = {
   entry: ["./entry.jsx"],
   output: {
@@ -15,7 +17,8 @@ module.exports = {
   resolve: {
     extensions: ['', '.js', '.jsx'],
     alias: {
-      fs: path.join(__dirname, "/stub-fs.js")
+      fs: stub,
+      lapack: stub
     }
   }
 };
