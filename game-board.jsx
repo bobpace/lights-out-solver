@@ -10,10 +10,10 @@ var {
   columnVectorToMatrix
 } = require('./game-logic');
 
-var makeCell = R.curry((rowOffset, updateBoard, rowSolution, value, columnIndex) => {
+var makeCell = R.curry((rowOffset, updateBoard, rowSolution, showSolution, value, columnIndex) => {
   var position = rowOffset + columnIndex + 1;
   var cellSolution = rowSolution[columnIndex];
-  var props = {key: columnIndex, updateBoard, value, position, cellSolution};
+  var props = {key: columnIndex, updateBoard, value, position, cellSolution, showSolution};
   return (
     <LightCell {... props} />
   );
@@ -39,13 +39,14 @@ var GameBoard = React.createClass({
       order,
       board,
       A,
+      showSolution: false,
       solution: this.findSolution(order, board, A)
     };
   },
   makeRow(row, rowIndex) {
     var rowOffset = this.state.order * rowIndex;
     var rowSolution = this.state.solution[rowIndex] || [];
-    var cellMaker = makeCell(rowOffset, this.updateBoard, rowSolution);
+    var cellMaker = makeCell(rowOffset, this.updateBoard, rowSolution, this.state.showSolution);
 
     return (
       <div className="light-row" key={rowIndex} >
@@ -74,6 +75,9 @@ var GameBoard = React.createClass({
       solution: this.findSolution(this.state.order, newBoardState, this.state.A)
     });
   },
+  showSolution() {
+    this.setState({showSolution: !this.state.showSolution});
+  },
   render() {
     var selectBoardSize = (
       <select value={this.state.order} onChange={this.changeBoardSize}>
@@ -85,6 +89,10 @@ var GameBoard = React.createClass({
       <div className="board">
         <div>
           {selectBoardSize}
+          <label>
+            Show solution:
+            <input type="checkbox" checked={this.state.showSolution} onChange={this.showSolution}/>
+          </label>
         </div>
         {this.state.board.map(this.makeRow)}
       </div>

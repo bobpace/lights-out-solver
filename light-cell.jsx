@@ -5,6 +5,7 @@ var LightCell = React.createClass({
   displayName: "LightCell",
   propTypes: {
     value: React.PropTypes.oneOf([0, 1]),
+    showSolution: React.PropTypes.bool,
     cellSolution: React.PropTypes.oneOf([0, 1]),
     position: React.PropTypes.number,
     updateBoard: React.PropTypes.func
@@ -20,7 +21,7 @@ var LightCell = React.createClass({
   render() {
     var lightState = this.props.value ? "light-on" : "light-off";
     var classes = ["light-cell", lightState];
-    if (this.props.cellSolution) {
+    if (this.props.cellSolution && this.props.showSolution) {
       classes.push('solution');
     }
     return (
